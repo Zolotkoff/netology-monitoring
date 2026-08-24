@@ -1,0 +1,47 @@
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb/data:/var/lib/influxdb:Z
+
+  telegraf:
+    image: telegraf:1.32
+    container_name: telegraf
+    hostname: telegraf-getting-started
+    user: "telegraf:111"
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:Z
+    depends_on:
+      - influxdb
+
+  kapacitor:
+    image: kapacitor:1.6
+    container_name: kapacitor
+    environment:
+      KAPACITOR_HOSTNAME: kapacitor
+      KAPACITOR_INFLUXDB_0_URLS_0: http://influxdb:8086
+    ports:
+      - "9092:9092"
+    volumes:
+      - ./kapacitor/data:/var/lib/kapacitor:Z
+    depends_on:
+      - influxdb
+
+  chronograf:
+    image: chronograf:1.9
+    container_name: chronograf
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      KAPACITOR_URL: http://kapacitor:9092
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./chronograf/data:/var/lib/chronograf:Z
+    depends_on:
+      - influxdb
+      - kapacitor
+      - telegraf
